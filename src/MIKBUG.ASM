@@ -1,4 +1,4 @@
-       NAM     MIKBUG
+      ;NAM     MIKBUG
 ; *     REV 009
 ; *     COPYRIGHT 1974 BY MOTOROLA INC
 
@@ -15,7 +15,7 @@ PIASB  EQU    $8007
 PIADB  EQU    $8006    ; B DATA
 PIAS   EQU    $8005    ; PIA STATUS
 PIAD   EQU    $8004    ; PIA DATA
-       OPT    MEMORY
+      ;OPT    MEMORY
        ORG    $E000
 
 ; *     I/O INTERRUPT SEQUENCE
