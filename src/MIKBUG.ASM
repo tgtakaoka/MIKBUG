@@ -34,12 +34,12 @@ LOAD   EQU    *
        BSR    OUTCH    ; OUTPUT CHAR
 
 LOAD3  BSR    INCH
-       CMP A  #'S
+       CMP A  #'S'
        BNE    LOAD3    ; 1ST CHAR NOT (S)
        BSR    INCH
-       CMP A  #'9
+       CMP A  #'9'
        BEQ    LOAD21
-       CMP A  #'1
+       CMP A  #'1'
        BNE    LOAD3    ; 2ND CHAR NOT (1)
        CLR    CKSM     ; ZERO CHECKSUM
        BSR    BYTE     ; READ BYTE
@@ -57,7 +57,7 @@ LOAD11 BSR    BYTE
 
 LOAD15 INC    CKSM
        BEQ    LOAD3
-LOAD19 LDA A  #'?      ; PRINT QUESTION MARK
+LOAD19 LDA A  #'?'     ; PRINT QUESTION MARK
        BSR    OUTCH
 LOAD21 EQU    *
 C1     JMP    CONTRL
@@ -175,16 +175,16 @@ CONTRL LDA A  #$34
        BSR    INCH     ; READ CHARACTER
        TAB
        BSR    OUTS     ; PRINT SPACE
-       CMP B  #'L
+       CMP B  #'L'
        BNE    *+5
        JMP    LOAD
-       CMP B  #'M
+       CMP B  #'M'
        BEQ    CHANGE
-       CMP B  #'R
+       CMP B  #'R'
        BEQ    PRINT    ; STACK
-       CMP B  #'P
+       CMP B  #'P'
        BEQ    PUNCH    ; PRINT/PUNCH
-       CMP B  #'G
+       CMP B  #'G'
        BNE    CONTRL
        LDS    SP       ; RESTORE PGM'S STACK PTR
        RTI             ; GO
@@ -216,7 +216,7 @@ C2     BRA    CONTRL
 ; *     ADDRESS (ENDA)
 ; *
 
-MTAPE1 FCB    $D,$A,0,0,0,0,'S,'1,4 ;   PUNCH FORMAT
+MTAPE1 FCB    $D,$A,0,0,0,0,'S','1',4 ; PUNCH FORMAT
 
 PUNCH  EQU    *
 
@@ -270,7 +270,7 @@ PUNT2  ADD B  0,X      ; UPDATE CHECKSUM
        JMP    OUT2H    ; OUTPUT TWO HEX CHAR AND RTS
 
 MCLOFF FCB    $13      ; READER OFF
-MCL    FCB    $D,$A,$14,0,0,0,'*,4 ;   C/R,L/F,PUNCH
+MCL    FCB    $D,$A,$14,0,0,0,'*',4 ; C/R,L/F,PUNCH
 ; *
 SAV    STX    XTEMP
        LDX    #PIAD
