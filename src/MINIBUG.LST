@@ -2,15 +2,15 @@
        2/       0 :                    * MINI-BUG
        3/       0 :                    * COPYWRITE 1973, MOTOROLA INC
        4/       0 :                    * REV 004 (USED WITH MIKBUG)
-       5/       0 : =FCF4              ACIACS EQU    @176364  ; ACIA CONTROL/STATUS
-       6/       0 : =FCF5              ACIADA EQU    ACIACS+1
+       5/       0 : =DF00              ACIACS EQU    $DF00    ;  ACIA CONTROL/STATUS
+       6/       0 : =DF01              ACIADA EQU    ACIACS+1
        7/    FE00 :                           ORG    $FE00
        8/    FE00 :                    * MINIB
        9/    FE00 :                    * INPUT ONE CHAR INTO A-REGISTER
-      10/    FE00 : B6 FC F4           INCH   LDAA   ACIACS
+      10/    FE00 : B6 DF 00           INCH   LDAA   ACIACS
       11/    FE03 : 47                        ASRA
       12/    FE04 : 24 FA                     BCC    INCH     ; RECEIVE NOT READY
-      13/    FE06 : B6 FC F5                  LDAA   ACIADA   ; INPUT CHARACTER
+      13/    FE06 : B6 DF 01                  LDAA   ACIADA   ; INPUT CHARACTER
       14/    FE09 : 84 7F                     ANDA   #$7F     ; RESET PARITY BIT
       15/    FE0B : 81 7F                     CMPA   #$7F
       16/    FE0D : 27 F1                     BEQ    INCH     ; RUBOUT; IGNORE
@@ -30,7 +30,7 @@
       30/    FE26 : 39                 IN1HG  RTS
       31/    FE27 :
       32/    FE27 : 86 D1              LOAD   LDAA   #$D1     ; TURN READER ON
-      33/    FE29 : B7 FC F4                  STAA   ACIACS
+      33/    FE29 : B7 DF 00                  STAA   ACIACS
       34/    FE2C : 86 11                     LDAA   #@21
       35/    FE2E : 8D 7E                     BSR    OUTCH
       36/    FE30 :
@@ -61,7 +61,7 @@
       61/    FE5D : 86 3F              LOAD19 LDAA   #'?      ; PRINT QUESTION MARK
       62/    FE5F : 8D 4D                     BSR    OUTCH
       63/    FE61 : 86 B1              LOAD21 LDAA   #$B1     ; TURN READER OFF
-      64/    FE63 : B7 FC F4                  STAA   ACIACS
+      64/    FE63 : B7 DF 00                  STAA   ACIACS
       65/    FE66 : 86 13                     LDAA   #@23
       66/    FE68 : 8D 44                     BSR    OUTCH
       67/    FE6A : 7E FE DB           C1     JMP    CONTRL
@@ -113,11 +113,11 @@
      113/    FEAE :
      114/    FEAE :                    * OUTPUT ONE CHAR
      115/    FEAE : 37                 OUTCH  PSHB            ; SAVE B-REG
-     116/    FEAF : F6 FC F4           OUTC1  LDAB   ACIACS
+     116/    FEAF : F6 DF 00           OUTC1  LDAB   ACIACS
      117/    FEB2 : 57                        ASRB
      118/    FEB3 : 57                        ASRB
      119/    FEB4 : 24 F9                     BCC    OUTC1    ; XMIT NOT READY
-     120/    FEB6 : B7 FC F5                  STAA   ACIADA   ; OUTPUT CHARACTER
+     120/    FEB6 : B7 DF 01                  STAA   ACIADA   ; OUTPUT CHARACTER
      121/    FEB9 : 33                        PULB
      122/    FEBA : 39                        RTS
      123/    FEBB :
@@ -145,7 +145,7 @@
      145/    FED6 : =FED6              START  EQU    *
      146/    FED6 :                    * INZ ACIA
      147/    FED6 : 86 B1                     LDAA   #$B1     ; SET SYSTEM PARAMETERS
-     148/    FED8 : B7 FC F4                  STAA   ACIACS
+     148/    FED8 : B7 DF 00                  STAA   ACIACS
      149/    FEDB :
      150/    FEDB : 8E FF 28           CONTRL LDS    #STACK   ; SET STACK POINTER
      151/    FEDE : 86 0D                     LDAA   #$D      ; CARRIAGE RETURN

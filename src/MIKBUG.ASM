@@ -11,11 +11,14 @@
 *     R  DISPLAY CONTENTS OF TARGET STACK
 *           CC   B   A   X   P   S
 
-PIASB  EQU    $8007
-PIADB  EQU    $8006    ; B DATA
-PIAS   EQU    $8005    ; PIA STATUS
-PIAD   EQU    $8004    ; PIA DATA
-;      OPT    MEMORY
+ACIAC  EQU    $DF00
+ACIAD  EQU    ACIAC+1
+
+;PIASB  EQU    $8007
+;PIADB  EQU    $8006    ; B DATA
+;PIAS   EQU    $8005    ; PIA STATUS
+;PIAD   EQU    $8004    ; PIA DATA
+;       OPT    MEMORY
        ORG    $E000
 
 *     I/O INTERRUPT SEQUENCE
@@ -28,8 +31,8 @@ POWDWN LDX    NIO      ; GET NMI VECTOR
 
 
 LOAD   EQU    *
-       LDAA   #$3C
-       STAA   PIASB    ; READER RELAY ON
+;       LDAA   #$3C
+;       STAA   PIASB    ; READER RELAY ON
        LDAA   #@21
        BSR    OUTCH    ; OUTPUT CHAR
 
@@ -158,15 +161,21 @@ START  EQU    *
        LDS    #STACK
        STS    SP       ; INZ TARGET'S STACK PNTR
 * INZ PIA
-       LDX    #PIAD    ; (X) POINTER TO DEVICE PIA
-       INC    0,X      ; SET DATA DIR PIAD
-       LDAA   #$7
-       STAA   1,X      ; INIT CON PIAS
-       INC    0,X      ; MARK COM LINE
-       STAA   2,X      ; SET DATA DIR PIADB
+;       LDX    #PIAD    ; (X) POINTER TO DEVICE PIA
+;       INC    0,X      ; SET DATA DIR PIAD
+;       LDAA   #$7
+;       STAA   1,X      ; INIT CON PIAS
+;       INC    0,X      ; MARK COM LINE
+;       STAA   2,X      ; SET DATA DIR PIADB
+;;; Initialize ACIA
+       LDX    #ACIAC
+       LDAA   #$86              ; master reset
+       STAA   0,X
+       LDAA   #$14              ; 8bit+no parity+1stop
+       STAA   0,X
 CONTRL LDAA   #$34
-       STAA   PIASB    ; SET CONTROL PIASB TURN READER
-       STAA   PIADB    ; SET TIMER INTERVAL
+;       STAA   PIASB    ; SET CONTROL PIASB TURN READER
+;       STAA   PIADB    ; SET TIMER INTERVAL
        LDS    #STACK   ; SET CONTROL STACK POINTER
        LDX    #MCLOFF
 
@@ -273,48 +282,60 @@ MCLOFF FCB    $13      ; READER OFF
 MCL    FCB    $D,$A,$14,0,0,0,'*,4 ; C/R,L/F,PUNCH
 *
 SAV    STX    XTEMP
-       LDX    #PIAD
+;       LDX    #PIAD
+        LDX     #ACIAC
        RTS
 * INPUT ONE CHAR INTO A-REGISTER
 INEEE  PSHB            ; SAVE ACC-B
        BSR    SAV      ; SAV XR
-IN1    LDAA   0,X      ; LOOK FOR START BIT
-       BMI    IN1
-       CLR    2,X      ; SET COUNTER FOR HALF BIT TIME
-       BSR    DE       ; START TIMER
-       BSR    DEL      ; DELAY HALF BIT TIME
-       LDAB   #4       ; SET DEL FOR FULL BIT TIME
-       STAB   2,X
-       ASLB            ; SET UP CNTR WITH 8
-IN3    BSR    DEL      ; WAIT ONE CHAR TIME
-       SEC             ; MARK COM LINE
-       ROL    0,X      ; GET BIT INTO CFF
-       RORA            ; CFF TO AR
-       DECB
-       BNE    IN3
-       BSR    DEL      ; WAIT FOR STOP BIT
+IN1
+       LDAA   0,X               ; Load ACIA status register
+       LSRA                     ; C=RDRF (Read Data Register Full)
+       BCC    IN1
+;LDAA   0,X      ; LOOK FOR START BIT
+;       BMI    IN1
+;       CLR    2,X      ; SET COUNTER FOR HALF BIT TIME
+;       BSR    DE       ; START TIMER
+;       BSR    DEL      ; DELAY HALF BIT TIME
+;       LDAB   #4       ; SET DEL FOR FULL BIT TIME
+;       STAB   2,X
+;       ASLB            ; SET UP CNTR WITH 8
+;IN3    BSR    DEL      ; WAIT ONE CHAR TIME
+;       SEC             ; MARK COM LINE
+;       ROL    0,X      ; GET BIT INTO CFF
+;       RORA            ; CFF TO AR
+;       DECB
+;       BNE    IN3
+;       BSR    DEL      ; WAIT FOR STOP BIT
+       LDAA   1,X              ; read RDR
        ANDA   #$7F     ; RESET PARITY BIT
        CMPA   #$7F
        BEQ    IN1      ; IF RUBOUT,GET NEXT CHAR
-       BRA    IOUT2    ; GO RESTORE REG
+;       BRA    IOUT2    ; GO RESTORE REG
+       BRA     IOS
 
 * OUTPUT ONE CHAR
 OUTEEE PSHB            ; SAV BR
        BSR    SAV      ; SAV XR
-IOUT   LDAB   #$A      ; SET UP COUNTER
-       DEC    0,X      ; SET START BIT
-       BSR    DE       ; START TIMER
-*
-OUT1   BSR    DEL      ; DELAY ONE BIT TIME
-       STAA   0,X      ; SET START BIT
-       SEC             ; SET CARRY BIT
-       RORA            ; SHIFT IN NEXT BIT
-       DECB            ; DECEREMENT COUNTER
-       BNE    OUT1     ; TEST FOR 0
-IOUT2  LDAB   2,X      ; TEST FOR STOP BITS
-       ASLB            ; SHIFT BIT TO SIGN
-       BPL    IOS      ; BRANCH FOR 1 STOP BIT
-       BSR    DEL      ; DELAY FOR STOP BITS
+IOUT   LDAB   0,X               ; Load ACIA status register
+       LSRB
+       LSRB                     ; C=TDRE (Transimit Data Register Empty)
+       BCC    IOUT
+       STAA   1,X               ; Write TDR
+;IOUT   LDAB   #$A      ; SET UP COUNTER
+;       DEC    0,X      ; SET START BIT
+;       BSR    DE       ; START TIMER
+;*
+;OUT1   BSR    DEL      ; DELAY ONE BIT TIME
+;       STAA   0,X      ; SET START BIT
+;       SEC             ; SET CARRY BIT
+;       RORA            ; SHIFT IN NEXT BIT
+;       DECB            ; DECEREMENT COUNTER
+;       BNE    OUT1     ; TEST FOR 0
+;IOUT2  LDAB   2,X      ; TEST FOR STOP BITS
+;       ASLB            ; SHIFT BIT TO SIGN
+;       BPL    IOS      ; BRANCH FOR 1 STOP BIT
+;       BSR    DEL      ; DELAY FOR STOP BITS
 IOS    LDX    XTEMP    ; RES XR
        PULB            ; REESTORE BR
        RTS
@@ -347,6 +368,7 @@ XTEMP  RMB    2        ; X-REG TEMP STORAGE
        RMB    46
 STACK  RMB    1        ; STACK POINTER
 
-
+       ORG     $FFFE
+       FDB     START
 
        END
