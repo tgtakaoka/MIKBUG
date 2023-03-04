@@ -1,354 +1,441 @@
-       1/       0 :                    ;       NAM     MIKBUG
-       2/       0 :                    *     REV 009
-       3/       0 :                    *     COPYRIGHT 1974 BY MOTOROLA INC
-       4/       0 :
-       5/       0 :                    *     MIKBUG (TM)
-       6/       0 :
-       7/       0 :                    *     L  LOAD
-       8/       0 :                    *     G  GO TO TARGET PROGRAM
-       9/       0 :                    *     M  MEMORY CHANGE
-      10/       0 :                    *     P  PRINT/PUNCH DUMP
-      11/       0 :                    *     R  DISPLAY CONTENTS OF TARGET STACK
-      12/       0 :                    *           CC   B   A   X   P   S
-      13/       0 :
-      14/       0 : =8007              PIASB  EQU    $8007
-      15/       0 : =8006              PIADB  EQU    $8006    ; B DATA
-      16/       0 : =8005              PIAS   EQU    $8005    ; PIA STATUS
-      17/       0 : =8004              PIAD   EQU    $8004    ; PIA DATA
-      18/       0 :                    ;      OPT    MEMORY
-      19/    E000 :                           ORG    $E000
-      20/    E000 :
-      21/    E000 :                    *     I/O INTERRUPT SEQUENCE
-      22/    E000 : FE A0 00           IO     LDX    IOV
-      23/    E003 : 6E 00                     JMP    0,X
-      24/    E005 :
-      25/    E005 :                    * NMI SEQUENCE
-      26/    E005 : FE A0 06           POWDWN LDX    NIO      ; GET NMI VECTOR
-      27/    E008 : 6E 00                     JMP    0,X
-      28/    E00A :
-      29/    E00A :
-      30/    E00A : =E00A              LOAD   EQU    *
-      31/    E00A : 86 3C                     LDAA   #$3C
-      32/    E00C : B7 80 07                  STAA   PIASB    ; READER RELAY ON
-      33/    E00F : 86 11                     LDAA   #@21
-      34/    E011 : 8D 62                     BSR    OUTCH    ; OUTPUT CHAR
-      35/    E013 :
-      36/    E013 : 8D 63              LOAD3  BSR    INCH
-      37/    E015 : 81 53                     CMPA   #'S
-      38/    E017 : 26 FA                     BNE    LOAD3    ; 1ST CHAR NOT (S)
-      39/    E019 : 8D 5D                     BSR    INCH
-      40/    E01B : 81 39                     CMPA   #'9
-      41/    E01D : 27 25                     BEQ    LOAD21
-      42/    E01F : 81 31                     CMPA   #'1
-      43/    E021 : 26 F0                     BNE    LOAD3    ; 2ND CHAR NOT (1)
-      44/    E023 : 7F A0 0A                  CLR    CKSM     ; ZERO CHECKSUM
-      45/    E026 : 8D 2D                     BSR    BYTE     ; READ BYTE
-      46/    E028 : 80 02                     SUBA   #2
-      47/    E02A : B7 A0 0B                  STAA   BYTECT   ; BYTE COUNT
-      48/    E02D :                    * BUILD ADDRESS
-      49/    E02D : 8D 18                     BSR    BADDR
-      50/    E02F :                    * STORE DATA
-      51/    E02F : 8D 24              LOAD11 BSR    BYTE
-      52/    E031 : 7A A0 0B                  DEC    BYTECT
-      53/    E034 : 27 05                     BEQ    LOAD15   ; ZERO BYTE COUNT
-      54/    E036 : A7 00                     STAA   0,X      ; STORE DATA
-      55/    E038 : 08                        INX
-      56/    E039 : 20 F4                     BRA    LOAD11
-      57/    E03B :
-      58/    E03B : 7C A0 0A           LOAD15 INC    CKSM
-      59/    E03E : 27 D3                     BEQ    LOAD3
-      60/    E040 : 86 3F              LOAD19 LDAA   #'?      ; PRINT QUESTION MARK
-      61/    E042 : 8D 31                     BSR    OUTCH
-      62/    E044 : =E044              LOAD21 EQU    *
-      63/    E044 : 7E E0 E3           C1     JMP    CONTRL
-      64/    E047 :
-      65/    E047 :                    * BUILD ADDRESS
-      66/    E047 : 8D 0C              BADDR  BSR    BYTE     ; READ 2 FRAMES
-      67/    E049 : B7 A0 0C                  STAA   XHI
-      68/    E04C : 8D 07                     BSR    BYTE
-      69/    E04E : B7 A0 0D                  STAA   XLOW
-      70/    E051 : FE A0 0C                  LDX    XHI      ; (X) ADDRESS WE BUILT
-      71/    E054 : 39                        RTS
-      72/    E055 :
-      73/    E055 :                    * INPUT BYTE (TWO FRAMES)
-      74/    E055 : 8D 53              BYTE   BSR    INHEX    ; GET HEX CHAR
-      75/    E057 : 48                        ASLA
-      76/    E058 : 48                        ASLA
-      77/    E059 : 48                        ASLA
-      78/    E05A : 48                        ASLA
-      79/    E05B : 16                        TAB
-      80/    E05C : 8D 4C                     BSR    INHEX
-      81/    E05E : 1B                        ABA
-      82/    E05F : 16                        TAB
-      83/    E060 : FB A0 0A                  ADDB   CKSM
-      84/    E063 : F7 A0 0A                  STAB   CKSM
-      85/    E066 : 39                        RTS
-      86/    E067 :
-      87/    E067 : 44                 OUTHL  LSRA            ; OUT HEX LEFT BCD DIGIT
-      88/    E068 : 44                        LSRA
-      89/    E069 : 44                        LSRA
-      90/    E06A : 44                        LSRA
-      91/    E06B :
-      92/    E06B : 84 0F              OUTHR  ANDA   #$F      ; OUT HEX RIGHT BCD DIGIT
-      93/    E06D : 8B 30                     ADDA   #$30
-      94/    E06F : 81 39                     CMPA   #$39
-      95/    E071 : 23 02                     BLS    OUTCH
-      96/    E073 : 8B 07                     ADDA   #$7
-      97/    E075 :
-      98/    E075 :                    * OUTPUT ONE CHAR
-      99/    E075 : 7E E1 D1           OUTCH  JMP    OUTEEE
-     100/    E078 : 7E E1 AC           INCH   JMP    INEEE
-     101/    E07B :
-     102/    E07B :                    * PRINT DATA POINTED AT BY X-REG
-     103/    E07B : 8D F8              PDATA2 BSR    OUTCH
-     104/    E07D : 08                        INX
-     105/    E07E : A6 00              PDATA1 LDAA   0,X
-     106/    E080 : 81 04                     CMPA   #4
-     107/    E082 : 26 F7                     BNE    PDATA2
-     108/    E084 : 39                        RTS             ; STOP ON EOT
-     109/    E085 :
-     110/    E085 :                    * CHANGE MEMORY (M AAAA DD NN)
-     111/    E085 : 8D C0              CHANGE BSR    BADDR    ; BUILD ADDRESS
-     112/    E087 : CE E1 9D           CHA51  LDX    #MCL
-     113/    E08A : 8D F2                     BSR    PDATA1   ; C/R L/F
-     114/    E08C : CE A0 0C                  LDX    #XHI
-     115/    E08F : 8D 37                     BSR    OUT4HS   ; PRINT ADDRESS
-     116/    E091 : FE A0 0C                  LDX    XHI
-     117/    E094 : 8D 34                     BSR    OUT2HS   ; PRINT DATA (OLD)
-     118/    E096 : FF A0 0C                  STX    XHI      ; SAVE DATA ADDRESS
-     119/    E099 : 8D DD                     BSR    INCH     ; INPUT ONE CHAR
-     120/    E09B : 81 20                     CMPA   #$20
-     121/    E09D : 26 E8                     BNE    CHA51    ; NOT SPACE
-     122/    E09F : 8D B4                     BSR    BYTE     ; INPUT NEW DATA
-     123/    E0A1 : 09                        DEX
-     124/    E0A2 : A7 00                     STAA   0,X      ; CHANGE MEMORY
-     125/    E0A4 : A1 00                     CMPA   0,X
-     126/    E0A6 : 27 DF                     BEQ    CHA51    ; DID CHANGE
-     127/    E0A8 : 20 96                     BRA    LOAD19   ; NOT CHANGED
-     128/    E0AA :
-     129/    E0AA :
-     130/    E0AA :
-     131/    E0AA :                    * INPUT HEX CHAR
-     132/    E0AA : 8D CC              INHEX  BSR    INCH
-     133/    E0AC : 80 30                     SUBA   #$30
-     134/    E0AE : 2B 94                     BMI    C1       ; NOT HEX
-     135/    E0B0 : 81 09                     CMPA   #$09
-     136/    E0B2 : 2F 0A                     BLE    IN1HG
-     137/    E0B4 : 81 11                     CMPA   #$11
-     138/    E0B6 : 2B 8C                     BMI    C1       ; NOT HEX
-     139/    E0B8 : 81 16                     CMPA   #$16
-     140/    E0BA : 2E 88                     BGT    C1       ; NOT HEX
-     141/    E0BC : 80 07                     SUBA   #7
-     142/    E0BE : 39                 IN1HG  RTS
-     143/    E0BF :
-     144/    E0BF :
-     145/    E0BF : A6 00              OUT2H  LDAA   0,X      ; OUTPUT 2 HEX CHAR
-     146/    E0C1 : 8D A4              OUT2HA BSR    OUTHL    ; OUT LEFT HEX CHAR
-     147/    E0C3 : A6 00                     LDAA   0,X
-     148/    E0C5 : 08                        INX
-     149/    E0C6 : 20 A3                     BRA    OUTHR    ; OUTPUT RIGHT HEX CHAR AND RTS
-     150/    E0C8 :
-     151/    E0C8 : 8D F5              OUT4HS BSR    OUT2H    ; OUTPUT 4 HEX CHAR + SPACE
-     152/    E0CA : 8D F3              OUT2HS BSR    OUT2H    ; OUTPUT 2 HEX CHAR + SPACE
-     153/    E0CC : 86 20              OUTS   LDAA   #$20     ; SPACE
-     154/    E0CE : 20 A5                     BRA    OUTCH    ; (BSR & RTS)
-     155/    E0D0 :
-     156/    E0D0 :                    * ENTER POWER ON SEQUENCE
-     157/    E0D0 : =E0D0              START  EQU    *
-     158/    E0D0 : 8E A0 42                  LDS    #STACK
-     159/    E0D3 : BF A0 08                  STS    SP       ; INZ TARGET'S STACK PNTR
-     160/    E0D6 :                    * INZ PIA
-     161/    E0D6 : CE 80 04                  LDX    #PIAD    ; (X) POINTER TO DEVICE PIA
-     162/    E0D9 : 6C 00                     INC    0,X      ; SET DATA DIR PIAD
-     163/    E0DB : 86 07                     LDAA   #$7
-     164/    E0DD : A7 01                     STAA   1,X      ; INIT CON PIAS
-     165/    E0DF : 6C 00                     INC    0,X      ; MARK COM LINE
-     166/    E0E1 : A7 02                     STAA   2,X      ; SET DATA DIR PIADB
-     167/    E0E3 : 86 34              CONTRL LDAA   #$34
-     168/    E0E5 : B7 80 07                  STAA   PIASB    ; SET CONTROL PIASB TURN READER
-     169/    E0E8 : B7 80 06                  STAA   PIADB    ; SET TIMER INTERVAL
-     170/    E0EB : 8E A0 42                  LDS    #STACK   ; SET CONTROL STACK POINTER
-     171/    E0EE : CE E1 9C                  LDX    #MCLOFF
-     172/    E0F1 :
-     173/    E0F1 : 8D 8B                     BSR    PDATA1   ; PRINT DATA STRING
-     174/    E0F3 :
-     175/    E0F3 : 8D 83                     BSR    INCH     ; READ CHARACTER
-     176/    E0F5 : 16                        TAB
-     177/    E0F6 : 8D D4                     BSR    OUTS     ; PRINT SPACE
-     178/    E0F8 : C1 4C                     CMPB   #'L
-     179/    E0FA : 26 03                     BNE    *+5
-     180/    E0FC : 7E E0 0A                  JMP    LOAD
-     181/    E0FF : C1 4D                     CMPB   #'M
-     182/    E101 : 27 82                     BEQ    CHANGE
-     183/    E103 : C1 52                     CMPB   #'R
-     184/    E105 : 27 18                     BEQ    PRINT    ; STACK
-     185/    E107 : C1 50                     CMPB   #'P
-     186/    E109 : 27 32                     BEQ    PUNCH    ; PRINT/PUNCH
-     187/    E10B : C1 47                     CMPB   #'G
-     188/    E10D : 26 D4                     BNE    CONTRL
-     189/    E10F : BE A0 08                  LDS    SP       ; RESTORE PGM'S STACK PTR
-     190/    E112 : 3B                        RTI             ; GO
-     191/    E113 :
-     192/    E113 :                    * ENTER FROM SOFTWARE INTERRUPT
-     193/    E113 : =E113              SFE    EQU    *
-     194/    E113 : BF A0 08                  STS    SP       ; SAVE TARGET'S STACK POINTER
-     195/    E116 :                    * DECREMENT P-COUNTER
-     196/    E116 : 30                        TSX
-     197/    E117 : 6D 06                     TST    6,X
-     198/    E119 : 26 02                     BNE    *+4
-     199/    E11B : 6A 05                     DEC    5,X
-     200/    E11D : 6A 06                     DEC    6,X
-     201/    E11F :
-     202/    E11F :                    * PRINT CONTENTS OF STACK
-     203/    E11F : FE A0 08           PRINT  LDX    SP
-     204/    E122 : 08                        INX
-     205/    E123 : 8D A5                     BSR    OUT2HS   ; CONDITION CODES
-     206/    E125 : 8D A3                     BSR    OUT2HS   ; ACC-B
-     207/    E127 : 8D A1                     BSR    OUT2HS   ; ACC-A
-     208/    E129 : 8D 9D                     BSR    OUT4HS   ; X-REG
-     209/    E12B : 8D 9B                     BSR    OUT4HS   ; P-COUNTER
-     210/    E12D : CE A0 08                  LDX    #SP
-     211/    E130 : 8D 96                     BSR    OUT4HS   ; STACK POINTER
-     212/    E132 : 20 AF              C2     BRA    CONTRL
-     213/    E134 :
-     214/    E134 :                    *     PUNCH DUMP
-     215/    E134 :                    *     PUNCH FROM BEGINING ADDRESS (BEGA) THRU ENDING
-     216/    E134 :                    *     ADDRESS (ENDA)
-     217/    E134 :                    *
-     218/    E134 :
-     219/    E134 : 0D 0A 00 00 00 00  MTAPE1 FCB    $D,$A,0,0,0,0,'S,'1,4 ; PUNCH FORMAT
-             E13A : 53 31 04
-     220/    E13D :
-     221/    E13D : =E13D              PUNCH  EQU    *
-     222/    E13D :
-     223/    E13D : 86 12                     LDAA   #$12     ; TURN TTY PUNCH ON
-     224/    E13F : BD E0 75                  JSR    OUTCH    ; OUT CHAR
-     225/    E142 :
-     226/    E142 : FE A0 02                  LDX    BEGA
-     227/    E145 : FF A0 0F                  STX    TW       ; TEMP BEGINING ADDRESS
-     228/    E148 : B6 A0 05           PUN11  LDAA   ENDA+1
-     229/    E14B : B0 A0 10                  SUBA   TW+1
-     230/    E14E : F6 A0 04                  LDAB   ENDA
-     231/    E151 : F2 A0 0F                  SBCB   TW
-     232/    E154 : 26 04                     BNE    PUN22
-     233/    E156 : 81 10                     CMPA   #16
-     234/    E158 : 25 02                     BCS    PUN23
-     235/    E15A : 86 0F              PUN22  LDAA   #15
-     236/    E15C : 8B 04              PUN23  ADDA   #4
-     237/    E15E : B7 A0 11                  STAA   MCONT    ; FRAME COUNT THIS RECORD
-     238/    E161 : 80 03                     SUBA   #3
-     239/    E163 : B7 A0 0E                  STAA   TEMP     ; BYTE COUNT THIS RECORD
-     240/    E166 :                    *     PUNCH C/R,L/F,NULL,S,1
-     241/    E166 : CE E1 34                  LDX    #MTAPE1
-     242/    E169 : BD E0 7E                  JSR    PDATA1
-     243/    E16C : 5F                        CLRB            ; ZERO CHECKSUM
-     244/    E16D :                    *     PUNCH FRAME COUNT
-     245/    E16D : CE A0 11                  LDX    #MCONT
-     246/    E170 : 8D 25                     BSR    PUNT2    ; PUNCH 2 HEX CHAR
-     247/    E172 :                    *     PUNCH ADDRESS
-     248/    E172 : CE A0 0F                  LDX    #TW
-     249/    E175 : 8D 20                     BSR    PUNT2
-     250/    E177 : 8D 1E                     BSR    PUNT2
-     251/    E179 :                    *     PUNCH DATA
-     252/    E179 : FE A0 0F                  LDX    TW
-     253/    E17C : 8D 19              PUN32  BSR    PUNT2    ; PUNCH ONE BYTE (2 FRAMES)
-     254/    E17E : 7A A0 0E                  DEC    TEMP     ; DEC BYTE COUNT
-     255/    E181 : 26 F9                     BNE    PUN32
-     256/    E183 : FF A0 0F                  STX    TW
-     257/    E186 : 53                        COMB
-     258/    E187 : 37                        PSHB
-     259/    E188 : 30                        TSX
-     260/    E189 : 8D 0C                     BSR    PUNT2    ; PUNCH CHECKSUM
-     261/    E18B : 33                        PULB
-     262/    E18C : FE A0 0F                  LDX    TW
-     263/    E18F : 09                        DEX
-     264/    E190 : BC A0 04                  CPX    ENDA
-     265/    E193 : 26 B3                     BNE    PUN11
-     266/    E195 : 20 9B                     BRA    C2       ; JMP TO CONTROL
-     267/    E197 :
-     268/    E197 :                    *     PUNCH 2 HEX CHAR, UPDATE CHECKSUM
-     269/    E197 : EB 00              PUNT2  ADDB   0,X      ; UPDATE CHECKSUM
-     270/    E199 : 7E E0 BF                  JMP    OUT2H    ; OUTPUT TWO HEX CHAR AND RTS
-     271/    E19C :
-     272/    E19C : 13                 MCLOFF FCB    $13      ; READER OFF
-     273/    E19D : 0D 0A 14 00 00 00  MCL    FCB    $D,$A,$14,0,0,0,'*,4 ; C/R,L/F,PUNCH
-             E1A3 : 2A 04
-     274/    E1A5 :                    *
-     275/    E1A5 : FF A0 12           SAV    STX    XTEMP
-     276/    E1A8 : CE 80 04                  LDX    #PIAD
-     277/    E1AB : 39                        RTS
-     278/    E1AC :                    * INPUT ONE CHAR INTO A-REGISTER
-     279/    E1AC : 37                 INEEE  PSHB            ; SAVE ACC-B
-     280/    E1AD : 8D F6                     BSR    SAV      ; SAV XR
-     281/    E1AF : A6 00              IN1    LDAA   0,X      ; LOOK FOR START BIT
-     282/    E1B1 : 2B FC                     BMI    IN1
-     283/    E1B3 : 6F 02                     CLR    2,X      ; SET COUNTER FOR HALF BIT TIME
-     284/    E1B5 : 8D 3C                     BSR    DE       ; START TIMER
-     285/    E1B7 : 8D 36                     BSR    DEL      ; DELAY HALF BIT TIME
-     286/    E1B9 : C6 04                     LDAB   #4       ; SET DEL FOR FULL BIT TIME
-     287/    E1BB : E7 02                     STAB   2,X
-     288/    E1BD : 58                        ASLB            ; SET UP CNTR WITH 8
-     289/    E1BE : 8D 2F              IN3    BSR    DEL      ; WAIT ONE CHAR TIME
-     290/    E1C0 : 0D                        SEC             ; MARK COM LINE
-     291/    E1C1 : 69 00                     ROL    0,X      ; GET BIT INTO CFF
-     292/    E1C3 : 46                        RORA            ; CFF TO AR
-     293/    E1C4 : 5A                        DECB
-     294/    E1C5 : 26 F7                     BNE    IN3
-     295/    E1C7 : 8D 26                     BSR    DEL      ; WAIT FOR STOP BIT
-     296/    E1C9 : 84 7F                     ANDA   #$7F     ; RESET PARITY BIT
-     297/    E1CB : 81 7F                     CMPA   #$7F
-     298/    E1CD : 27 E0                     BEQ    IN1      ; IF RUBOUT,GET NEXT CHAR
-     299/    E1CF : 20 12                     BRA    IOUT2    ; GO RESTORE REG
-     300/    E1D1 :
-     301/    E1D1 :                    * OUTPUT ONE CHAR
-     302/    E1D1 : 37                 OUTEEE PSHB            ; SAV BR
-     303/    E1D2 : 8D D1                     BSR    SAV      ; SAV XR
-     304/    E1D4 : C6 0A              IOUT   LDAB   #$A      ; SET UP COUNTER
-     305/    E1D6 : 6A 00                     DEC    0,X      ; SET START BIT
-     306/    E1D8 : 8D 19                     BSR    DE       ; START TIMER
-     307/    E1DA :                    *
-     308/    E1DA : 8D 13              OUT1   BSR    DEL      ; DELAY ONE BIT TIME
-     309/    E1DC : A7 00                     STAA   0,X      ; SET START BIT
-     310/    E1DE : 0D                        SEC             ; SET CARRY BIT
-     311/    E1DF : 46                        RORA            ; SHIFT IN NEXT BIT
-     312/    E1E0 : 5A                        DECB            ; DECEREMENT COUNTER
-     313/    E1E1 : 26 F7                     BNE    OUT1     ; TEST FOR 0
-     314/    E1E3 : E6 02              IOUT2  LDAB   2,X      ; TEST FOR STOP BITS
-     315/    E1E5 : 58                        ASLB            ; SHIFT BIT TO SIGN
-     316/    E1E6 : 2A 02                     BPL    IOS      ; BRANCH FOR 1 STOP BIT
-     317/    E1E8 : 8D 05                     BSR    DEL      ; DELAY FOR STOP BITS
-     318/    E1EA : FE A0 12           IOS    LDX    XTEMP    ; RES XR
-     319/    E1ED : 33                        PULB            ; REESTORE BR
-     320/    E1EE : 39                        RTS
-     321/    E1EF :                    *
-     322/    E1EF : 6D 02              DEL    TST    2,X      ; IS TIME UP
-     323/    E1F1 : 2A FC                     BPL    DEL
-     324/    E1F3 : 6C 02              DE     INC    2,X      ; RESET TIMER
-     325/    E1F5 : 6A 02                     DEC    2,X
-     326/    E1F7 : 39                        RTS
-     327/    E1F8 :
-     328/    E1F8 : E0 00                     FDB    IO
-     329/    E1FA : E1 13                     FDB    SFE
-     330/    E1FC : E0 05                     FDB    POWDWN
-     331/    E1FE : E0 D0                     FDB    START
-     332/    A000 :                           ORG    $A000
-     333/    A000 :                    IOV    RMB    2        ; IO INTERRUPT POINTER
-     334/    A002 :                    BEGA   RMB    2        ; BEGINING ADDR PRINT/PUNCH
-     335/    A004 :                    ENDA   RMB    2        ; ENDING ADDR PRINT/PUNCH
-     336/    A006 :                    NIO    RMB    2        ; NMI INTERRUPT POINTER
-     337/    A008 :                    SP     RMB    1        ; S-HIGH
-     338/    A009 :                           RMB    1        ; S-LOW
-     339/    A00A :                    CKSM   RMB    1        ; CHECKSUM
-     340/    A00B :                    BYTECT RMB    1        ; BYTE COUNT
-     341/    A00C :                    XHI    RMB    1        ; XREG HIGH
-     342/    A00D :                    XLOW   RMB    1        ; XREG LOW
-     343/    A00E :                    TEMP   RMB    1        ; CHAR COUNT (INADDR)
-     344/    A00F :                    TW     RMB    2        ; TEMP/
-     345/    A011 :                    MCONT  RMB    1        ; TEMP
-     346/    A012 :                    XTEMP  RMB    2        ; X-REG TEMP STORAGE
-     347/    A014 :                           RMB    46
-     348/    A042 :                    STACK  RMB    1        ; STACK POINTER
-     349/    A043 :
-     350/    A043 :
-     351/    A043 :
-     352/    A043 :                           END
+ AS V1.42 Beta [Bld 239] - Source File MIKBUG.ASM - Page 1 - 04/03/2023 02:01:35 PM
+
+
+       1/       0 :                     ;       NAM     MIKBUG
+       2/       0 :                     ;*     REV 009
+       3/       0 :                     ;*     COPYRIGHT 1974 BY MOTOROLA INC
+       4/       0 :                     
+       5/       0 :                     ;*     MIKBUG (TM)
+       6/       0 :                     
+       7/       0 :                     ;*     L  LOAD
+       8/       0 :                     ;*     G  GO TO TARGET PROGRAM
+       9/       0 :                     ;*     M  MEMORY CHANGE
+      10/       0 :                     ;*     P  PRINT/PUNCH DUMP
+      11/       0 :                     ;*     R  DISPLAY CONTENTS OF TARGET STACK
+      12/       0 :                     ;*           CC   B   A   X   P   S
+      13/       0 :                     
+      14/       0 : =$8007               PIASB  EQU    $8007
+      15/       0 : =$8006               PIADB  EQU    $8006    ; B DATA
+      16/       0 : =$8005               PIAS   EQU    $8005    ; PIA STATUS
+      17/       0 : =$8004               PIAD   EQU    $8004    ; PIA DATA
+      18/       0 :                     ;      OPT    MEMORY
+      19/    E000 :                            ORG    $E000
+      20/    E000 :                     
+      21/    E000 :                     ;*     I/O INTERRUPT SEQUENCE
+      22/    E000 : FE A0 00            IO     LDX    IOV
+      23/    E003 : 6E 00                      JMP    0,X
+      24/    E005 :                     
+      25/    E005 :                     ;* NMI SEQUENCE
+      26/    E005 : FE A0 06            POWDWN LDX    NIO      ; GET NMI VECTOR
+      27/    E008 : 6E 00                      JMP    0,X
+      28/    E00A :                     
+      29/    E00A :                     
+      30/    E00A : =$E00A               LOAD   EQU    *
+      31/    E00A : 86 3C                      LDAA   #$3C
+      32/    E00C : B7 80 07                   STAA   PIASB    ; READER RELAY ON
+      33/    E00F : 86 11                      LDAA   #@21
+      34/    E011 : 8D 62                      BSR    OUTCH    ; OUTPUT CHAR
+      35/    E013 :                     
+      36/    E013 : 8D 63               LOAD3  BSR    INCH
+      37/    E015 : 81 53                      CMPA   #'S'
+      38/    E017 : 26 FA                      BNE    LOAD3    ; 1ST CHAR NOT (S)
+      39/    E019 : 8D 5D                      BSR    INCH
+      40/    E01B : 81 39                      CMPA   #'9'
+      41/    E01D : 27 25                      BEQ    LOAD21
+      42/    E01F : 81 31                      CMPA   #'1'
+      43/    E021 : 26 F0                      BNE    LOAD3    ; 2ND CHAR NOT (1)
+      44/    E023 : 7F A0 0A                   CLR    CKSM     ; ZERO CHECKSUM
+      45/    E026 : 8D 2D                      BSR    BYTE     ; READ BYTE
+      46/    E028 : 80 02                      SUBA   #2
+      47/    E02A : B7 A0 0B                   STAA   BYTECT   ; BYTE COUNT
+      48/    E02D :                     ;* BUILD ADDRESS
+      49/    E02D : 8D 18                      BSR    BADDR
+      50/    E02F :                     ;* STORE DATA
+      51/    E02F : 8D 24               LOAD11 BSR    BYTE
+      52/    E031 : 7A A0 0B                   DEC    BYTECT
+      53/    E034 : 27 05                      BEQ    LOAD15   ; ZERO BYTE COUNT
+      54/    E036 : A7 00                      STAA   0,X      ; STORE DATA
+      55/    E038 : 08                         INX
+      56/    E039 : 20 F4                      BRA    LOAD11
+      57/    E03B :                     
+      58/    E03B : 7C A0 0A            LOAD15 INC    CKSM
+      59/    E03E : 27 D3                      BEQ    LOAD3
+      60/    E040 : 86 3F               LOAD19 LDAA   #'?'     ; PRINT QUESTION MARK
+ AS V1.42 Beta [Bld 239] - Source File MIKBUG.ASM - Page 2 - 04/03/2023 02:01:35 PM
+
+
+      61/    E042 : 8D 31                      BSR    OUTCH
+      62/    E044 : =$E044               LOAD21 EQU    *
+      63/    E044 : 7E E0 E3            C1     JMP    CONTRL
+      64/    E047 :                     
+      65/    E047 :                     ;* BUILD ADDRESS
+      66/    E047 : 8D 0C               BADDR  BSR    BYTE     ; READ 2 FRAMES
+      67/    E049 : B7 A0 0C                   STAA   XHI
+      68/    E04C : 8D 07                      BSR    BYTE
+      69/    E04E : B7 A0 0D                   STAA   XLOW
+      70/    E051 : FE A0 0C                   LDX    XHI      ; (X) ADDRESS WE BUILT
+      71/    E054 : 39                         RTS
+      72/    E055 :                     
+      73/    E055 :                     ;* INPUT BYTE (TWO FRAMES)
+      74/    E055 : 8D 53               BYTE   BSR    INHEX    ; GET HEX CHAR
+      75/    E057 : 48                         ASLA
+      76/    E058 : 48                         ASLA
+      77/    E059 : 48                         ASLA
+      78/    E05A : 48                         ASLA
+      79/    E05B : 16                         TAB
+      80/    E05C : 8D 4C                      BSR    INHEX
+      81/    E05E : 1B                         ABA
+      82/    E05F : 16                         TAB
+      83/    E060 : FB A0 0A                   ADDB   CKSM
+      84/    E063 : F7 A0 0A                   STAB   CKSM
+      85/    E066 : 39                         RTS
+      86/    E067 :                     
+      87/    E067 : 44                  OUTHL  LSRA            ; OUT HEX LEFT BCD DIGIT
+      88/    E068 : 44                         LSRA
+      89/    E069 : 44                         LSRA
+      90/    E06A : 44                         LSRA
+      91/    E06B :                     
+      92/    E06B : 84 0F               OUTHR  ANDA   #$F      ; OUT HEX RIGHT BCD DIGIT
+      93/    E06D : 8B 30                      ADDA   #$30
+      94/    E06F : 81 39                      CMPA   #$39
+      95/    E071 : 23 02                      BLS    OUTCH
+      96/    E073 : 8B 07                      ADDA   #$7
+      97/    E075 :                     
+      98/    E075 :                     ;* OUTPUT ONE CHAR
+      99/    E075 : 7E E1 D1            OUTCH  JMP    OUTEEE
+     100/    E078 : 7E E1 AC            INCH   JMP    INEEE
+     101/    E07B :                     
+     102/    E07B :                     ;* PRINT DATA POINTED AT BY X-REG
+     103/    E07B : 8D F8               PDATA2 BSR    OUTCH
+     104/    E07D : 08                         INX
+     105/    E07E : A6 00               PDATA1 LDAA   0,X
+     106/    E080 : 81 04                      CMPA   #4
+     107/    E082 : 26 F7                      BNE    PDATA2
+     108/    E084 : 39                         RTS             ; STOP ON EOT
+     109/    E085 :                     
+     110/    E085 :                     ;* CHANGE MEMORY (M AAAA DD NN)
+     111/    E085 : 8D C0               CHANGE BSR    BADDR    ; BUILD ADDRESS
+     112/    E087 : CE E1 9D            CHA51  LDX    #MCL
+     113/    E08A : 8D F2                      BSR    PDATA1   ; C/R L/F
+     114/    E08C : CE A0 0C                   LDX    #XHI
+     115/    E08F : 8D 37                      BSR    OUT4HS   ; PRINT ADDRESS
+     116/    E091 : FE A0 0C                   LDX    XHI
+     117/    E094 : 8D 34                      BSR    OUT2HS   ; PRINT DATA (OLD)
+     118/    E096 : FF A0 0C                   STX    XHI      ; SAVE DATA ADDRESS
+     119/    E099 : 8D DD                      BSR    INCH     ; INPUT ONE CHAR
+     120/    E09B : 81 20                      CMPA   #$20
+ AS V1.42 Beta [Bld 239] - Source File MIKBUG.ASM - Page 3 - 04/03/2023 02:01:35 PM
+
+
+     121/    E09D : 26 E8                      BNE    CHA51    ; NOT SPACE
+     122/    E09F : 8D B4                      BSR    BYTE     ; INPUT NEW DATA
+     123/    E0A1 : 09                         DEX
+     124/    E0A2 : A7 00                      STAA   0,X      ; CHANGE MEMORY
+     125/    E0A4 : A1 00                      CMPA   0,X
+     126/    E0A6 : 27 DF                      BEQ    CHA51    ; DID CHANGE
+     127/    E0A8 : 20 96                      BRA    LOAD19   ; NOT CHANGED
+     128/    E0AA :                     
+     129/    E0AA :                     
+     130/    E0AA :                     
+     131/    E0AA :                     ;* INPUT HEX CHAR
+     132/    E0AA : 8D CC               INHEX  BSR    INCH
+     133/    E0AC : 80 30                      SUBA   #$30
+     134/    E0AE : 2B 94                      BMI    C1       ; NOT HEX
+     135/    E0B0 : 81 09                      CMPA   #$09
+     136/    E0B2 : 2F 0A                      BLE    IN1HG
+     137/    E0B4 : 81 11                      CMPA   #$11
+     138/    E0B6 : 2B 8C                      BMI    C1       ; NOT HEX
+     139/    E0B8 : 81 16                      CMPA   #$16
+     140/    E0BA : 2E 88                      BGT    C1       ; NOT HEX
+     141/    E0BC : 80 07                      SUBA   #7
+     142/    E0BE : 39                  IN1HG  RTS
+     143/    E0BF :                     
+     144/    E0BF :                     
+     145/    E0BF : A6 00               OUT2H  LDAA   0,X      ; OUTPUT 2 HEX CHAR
+     146/    E0C1 : 8D A4               OUT2HA BSR    OUTHL    ; OUT LEFT HEX CHAR
+     147/    E0C3 : A6 00                      LDAA   0,X
+     148/    E0C5 : 08                         INX
+     149/    E0C6 : 20 A3                      BRA    OUTHR    ; OUTPUT RIGHT HEX CHAR AND RTS
+     150/    E0C8 :                     
+     151/    E0C8 : 8D F5               OUT4HS BSR    OUT2H    ; OUTPUT 4 HEX CHAR + SPACE
+     152/    E0CA : 8D F3               OUT2HS BSR    OUT2H    ; OUTPUT 2 HEX CHAR + SPACE
+     153/    E0CC : 86 20               OUTS   LDAA   #$20     ; SPACE
+     154/    E0CE : 20 A5                      BRA    OUTCH    ; (BSR & RTS)
+     155/    E0D0 :                     
+     156/    E0D0 :                     ;* ENTER POWER ON SEQUENCE
+     157/    E0D0 : =$E0D0               START  EQU    *
+     158/    E0D0 : 8E A0 42                   LDS    #STACK
+     159/    E0D3 : BF A0 08                   STS    SP       ; INZ TARGET'S STACK PNTR
+     160/    E0D6 :                     ;* INZ PIA
+     161/    E0D6 : CE 80 04                   LDX    #PIAD    ; (X) POINTER TO DEVICE PIA
+     162/    E0D9 : 6C 00                      INC    0,X      ; SET DATA DIR PIAD
+     163/    E0DB : 86 07                      LDAA   #$7
+     164/    E0DD : A7 01                      STAA   1,X      ; INIT CON PIAS
+     165/    E0DF : 6C 00                      INC    0,X      ; MARK COM LINE
+     166/    E0E1 : A7 02                      STAA   2,X      ; SET DATA DIR PIADB
+     167/    E0E3 : 86 34               CONTRL LDAA   #$34
+     168/    E0E5 : B7 80 07                   STAA   PIASB    ; SET CONTROL PIASB TURN READER
+     169/    E0E8 : B7 80 06                   STAA   PIADB    ; SET TIMER INTERVAL
+     170/    E0EB : 8E A0 42                   LDS    #STACK   ; SET CONTROL STACK POINTER
+     171/    E0EE : CE E1 9C                   LDX    #MCLOFF
+     172/    E0F1 :                     
+     173/    E0F1 : 8D 8B                      BSR    PDATA1   ; PRINT DATA STRING
+     174/    E0F3 :                     
+     175/    E0F3 : 8D 83                      BSR    INCH     ; READ CHARACTER
+     176/    E0F5 : 16                         TAB
+     177/    E0F6 : 8D D4                      BSR    OUTS     ; PRINT SPACE
+     178/    E0F8 : C1 4C                      CMPB   #'L'
+     179/    E0FA : 26 03                      BNE    *+5
+     180/    E0FC : 7E E0 0A                   JMP    LOAD
+ AS V1.42 Beta [Bld 239] - Source File MIKBUG.ASM - Page 4 - 04/03/2023 02:01:35 PM
+
+
+     181/    E0FF : C1 4D                      CMPB   #'M'
+     182/    E101 : 27 82                      BEQ    CHANGE
+     183/    E103 : C1 52                      CMPB   #'R'
+     184/    E105 : 27 18                      BEQ    PRINT    ; STACK
+     185/    E107 : C1 50                      CMPB   #'P'
+     186/    E109 : 27 32                      BEQ    PUNCH    ; PRINT/PUNCH
+     187/    E10B : C1 47                      CMPB   #'G'
+     188/    E10D : 26 D4                      BNE    CONTRL
+     189/    E10F : BE A0 08                   LDS    SP       ; RESTORE PGM'S STACK PTR
+     190/    E112 : 3B                         RTI             ; GO
+     191/    E113 :                     
+     192/    E113 :                     ;* ENTER FROM SOFTWARE INTERRUPT
+     193/    E113 : =$E113               SFE    EQU    *
+     194/    E113 : BF A0 08                   STS    SP       ; SAVE TARGET'S STACK POINTER
+     195/    E116 :                     ;* DECREMENT P-COUNTER
+     196/    E116 : 30                         TSX
+     197/    E117 : 6D 06                      TST    6,X
+     198/    E119 : 26 02                      BNE    *+4
+     199/    E11B : 6A 05                      DEC    5,X
+     200/    E11D : 6A 06                      DEC    6,X
+     201/    E11F :                     
+     202/    E11F :                     ;* PRINT CONTENTS OF STACK
+     203/    E11F : FE A0 08            PRINT  LDX    SP
+     204/    E122 : 08                         INX
+     205/    E123 : 8D A5                      BSR    OUT2HS   ; CONDITION CODES
+     206/    E125 : 8D A3                      BSR    OUT2HS   ; ACC-B
+     207/    E127 : 8D A1                      BSR    OUT2HS   ; ACC-A
+     208/    E129 : 8D 9D                      BSR    OUT4HS   ; X-REG
+     209/    E12B : 8D 9B                      BSR    OUT4HS   ; P-COUNTER
+     210/    E12D : CE A0 08                   LDX    #SP
+     211/    E130 : 8D 96                      BSR    OUT4HS   ; STACK POINTER
+     212/    E132 : 20 AF               C2     BRA    CONTRL
+     213/    E134 :                     
+     214/    E134 :                     ;*     PUNCH DUMP
+     215/    E134 :                     ;*     PUNCH FROM BEGINING ADDRESS (BEGA) THRU ENDING
+     216/    E134 :                     ;*     ADDRESS (ENDA)
+     217/    E134 :                     ;*
+     218/    E134 :                     
+     219/    E134 : 0D 0A 00 00 00 00   MTAPE1 FCB    $D,$A,0,0,0,0,'S','1',4 ; PUNCH FORMAT
+             E13A : 53 31 04          
+     220/    E13D :                     
+     221/    E13D : =$E13D               PUNCH  EQU    *
+     222/    E13D :                     
+     223/    E13D : 86 12                      LDAA   #$12     ; TURN TTY PUNCH ON
+     224/    E13F : BD E0 75                   JSR    OUTCH    ; OUT CHAR
+     225/    E142 :                     
+     226/    E142 : FE A0 02                   LDX    BEGA
+     227/    E145 : FF A0 0F                   STX    TW       ; TEMP BEGINING ADDRESS
+     228/    E148 : B6 A0 05            PUN11  LDAA   ENDA+1
+     229/    E14B : B0 A0 10                   SUBA   TW+1
+     230/    E14E : F6 A0 04                   LDAB   ENDA
+     231/    E151 : F2 A0 0F                   SBCB   TW
+     232/    E154 : 26 04                      BNE    PUN22
+     233/    E156 : 81 10                      CMPA   #16
+     234/    E158 : 25 02                      BCS    PUN23
+     235/    E15A : 86 0F               PUN22  LDAA   #15
+     236/    E15C : 8B 04               PUN23  ADDA   #4
+     237/    E15E : B7 A0 11                   STAA   MCONT    ; FRAME COUNT THIS RECORD
+     238/    E161 : 80 03                      SUBA   #3
+     239/    E163 : B7 A0 0E                   STAA   TEMP     ; BYTE COUNT THIS RECORD
+ AS V1.42 Beta [Bld 239] - Source File MIKBUG.ASM - Page 5 - 04/03/2023 02:01:35 PM
+
+
+     240/    E166 :                     ;*     PUNCH C/R,L/F,NULL,S,1
+     241/    E166 : CE E1 34                   LDX    #MTAPE1
+     242/    E169 : BD E0 7E                   JSR    PDATA1
+     243/    E16C : 5F                         CLRB            ; ZERO CHECKSUM
+     244/    E16D :                     ;*     PUNCH FRAME COUNT
+     245/    E16D : CE A0 11                   LDX    #MCONT
+     246/    E170 : 8D 25                      BSR    PUNT2    ; PUNCH 2 HEX CHAR
+     247/    E172 :                     ;*     PUNCH ADDRESS
+     248/    E172 : CE A0 0F                   LDX    #TW
+     249/    E175 : 8D 20                      BSR    PUNT2
+     250/    E177 : 8D 1E                      BSR    PUNT2
+     251/    E179 :                     ;*     PUNCH DATA
+     252/    E179 : FE A0 0F                   LDX    TW
+     253/    E17C : 8D 19               PUN32  BSR    PUNT2    ; PUNCH ONE BYTE (2 FRAMES)
+     254/    E17E : 7A A0 0E                   DEC    TEMP     ; DEC BYTE COUNT
+     255/    E181 : 26 F9                      BNE    PUN32
+     256/    E183 : FF A0 0F                   STX    TW
+     257/    E186 : 53                         COMB
+     258/    E187 : 37                         PSHB
+     259/    E188 : 30                         TSX
+     260/    E189 : 8D 0C                      BSR    PUNT2    ; PUNCH CHECKSUM
+     261/    E18B : 33                         PULB
+     262/    E18C : FE A0 0F                   LDX    TW
+     263/    E18F : 09                         DEX
+     264/    E190 : BC A0 04                   CPX    ENDA
+     265/    E193 : 26 B3                      BNE    PUN11
+     266/    E195 : 20 9B                      BRA    C2       ; JMP TO CONTROL
+     267/    E197 :                     
+     268/    E197 :                     ;*     PUNCH 2 HEX CHAR, UPDATE CHECKSUM
+     269/    E197 : EB 00               PUNT2  ADDB   0,X      ; UPDATE CHECKSUM
+     270/    E199 : 7E E0 BF                   JMP    OUT2H    ; OUTPUT TWO HEX CHAR AND RTS
+     271/    E19C :                     
+     272/    E19C : 13                  MCLOFF FCB    $13      ; READER OFF
+     273/    E19D : 0D 0A 14 00 00 00   MCL    FCB    $D,$A,$14,0,0,0,'*',4 ; C/R,L/F,PUNCH
+             E1A3 : 2A 04             
+     274/    E1A5 :                     ;*
+     275/    E1A5 : FF A0 12            SAV    STX    XTEMP
+     276/    E1A8 : CE 80 04                   LDX    #PIAD
+     277/    E1AB : 39                         RTS
+     278/    E1AC :                     ;* INPUT ONE CHAR INTO A-REGISTER
+     279/    E1AC : 37                  INEEE  PSHB            ; SAVE ACC-B
+     280/    E1AD : 8D F6                      BSR    SAV      ; SAV XR
+     281/    E1AF : A6 00               IN1    LDAA   0,X      ; LOOK FOR START BIT
+     282/    E1B1 : 2B FC                      BMI    IN1
+     283/    E1B3 : 6F 02                      CLR    2,X      ; SET COUNTER FOR HALF BIT TIME
+     284/    E1B5 : 8D 3C                      BSR    DE       ; START TIMER
+     285/    E1B7 : 8D 36                      BSR    DEL      ; DELAY HALF BIT TIME
+     286/    E1B9 : C6 04                      LDAB   #4       ; SET DEL FOR FULL BIT TIME
+     287/    E1BB : E7 02                      STAB   2,X
+     288/    E1BD : 58                         ASLB            ; SET UP CNTR WITH 8
+     289/    E1BE : 8D 2F               IN3    BSR    DEL      ; WAIT ONE CHAR TIME
+     290/    E1C0 : 0D                         SEC             ; MARK COM LINE
+     291/    E1C1 : 69 00                      ROL    0,X      ; GET BIT INTO CFF
+     292/    E1C3 : 46                         RORA            ; CFF TO AR
+     293/    E1C4 : 5A                         DECB
+     294/    E1C5 : 26 F7                      BNE    IN3
+     295/    E1C7 : 8D 26                      BSR    DEL      ; WAIT FOR STOP BIT
+     296/    E1C9 : 84 7F                      ANDA   #$7F     ; RESET PARITY BIT
+     297/    E1CB : 81 7F                      CMPA   #$7F
+     298/    E1CD : 27 E0                      BEQ    IN1      ; IF RUBOUT,GET NEXT CHAR
+ AS V1.42 Beta [Bld 239] - Source File MIKBUG.ASM - Page 6 - 04/03/2023 02:01:35 PM
+
+
+     299/    E1CF : 20 12                      BRA    IOUT2    ; GO RESTORE REG
+     300/    E1D1 :                     
+     301/    E1D1 :                     ;* OUTPUT ONE CHAR
+     302/    E1D1 : 37                  OUTEEE PSHB            ; SAV BR
+     303/    E1D2 : 8D D1                      BSR    SAV      ; SAV XR
+     304/    E1D4 : C6 0A               IOUT   LDAB   #$A      ; SET UP COUNTER
+     305/    E1D6 : 6A 00                      DEC    0,X      ; SET START BIT
+     306/    E1D8 : 8D 19                      BSR    DE       ; START TIMER
+     307/    E1DA :                     ;*
+     308/    E1DA : 8D 13               OUT1   BSR    DEL      ; DELAY ONE BIT TIME
+     309/    E1DC : A7 00                      STAA   0,X      ; SET START BIT
+     310/    E1DE : 0D                         SEC             ; SET CARRY BIT
+     311/    E1DF : 46                         RORA            ; SHIFT IN NEXT BIT
+     312/    E1E0 : 5A                         DECB            ; DECEREMENT COUNTER
+     313/    E1E1 : 26 F7                      BNE    OUT1     ; TEST FOR 0
+     314/    E1E3 : E6 02               IOUT2  LDAB   2,X      ; TEST FOR STOP BITS
+     315/    E1E5 : 58                         ASLB            ; SHIFT BIT TO SIGN
+     316/    E1E6 : 2A 02                      BPL    IOS      ; BRANCH FOR 1 STOP BIT
+     317/    E1E8 : 8D 05                      BSR    DEL      ; DELAY FOR STOP BITS
+     318/    E1EA : FE A0 12            IOS    LDX    XTEMP    ; RES XR
+     319/    E1ED : 33                         PULB            ; REESTORE BR
+     320/    E1EE : 39                         RTS
+     321/    E1EF :                     ;*
+     322/    E1EF : 6D 02               DEL    TST    2,X      ; IS TIME UP
+     323/    E1F1 : 2A FC                      BPL    DEL
+     324/    E1F3 : 6C 02               DE     INC    2,X      ; RESET TIMER
+     325/    E1F5 : 6A 02                      DEC    2,X
+     326/    E1F7 : 39                         RTS
+     327/    E1F8 :                     
+     328/    E1F8 : E0 00                      FDB    IO
+     329/    E1FA : E1 13                      FDB    SFE
+     330/    E1FC : E0 05                      FDB    POWDWN
+     331/    E1FE : E0 D0                      FDB    START
+     332/    A000 :                            ORG    $A000
+     333/    A000 :                     IOV    RMB    2        ; IO INTERRUPT POINTER
+     334/    A002 :                     BEGA   RMB    2        ; BEGINING ADDR PRINT/PUNCH
+     335/    A004 :                     ENDA   RMB    2        ; ENDING ADDR PRINT/PUNCH
+     336/    A006 :                     NIO    RMB    2        ; NMI INTERRUPT POINTER
+     337/    A008 :                     SP     RMB    1        ; S-HIGH
+     338/    A009 :                            RMB    1        ; S-LOW
+     339/    A00A :                     CKSM   RMB    1        ; CHECKSUM
+     340/    A00B :                     BYTECT RMB    1        ; BYTE COUNT
+     341/    A00C :                     XHI    RMB    1        ; XREG HIGH
+     342/    A00D :                     XLOW   RMB    1        ; XREG LOW
+     343/    A00E :                     TEMP   RMB    1        ; CHAR COUNT (INADDR)
+     344/    A00F :                     TW     RMB    2        ; TEMP/
+     345/    A011 :                     MCONT  RMB    1        ; TEMP
+     346/    A012 :                     XTEMP  RMB    2        ; X-REG TEMP STORAGE
+     347/    A014 :                            RMB    46
+     348/    A042 :                     STACK  RMB    1        ; STACK POINTER
+     349/    A043 :                     
+     350/    A043 :                     
+     351/    A043 :                     
+     352/    A043 :                            END
+ AS V1.42 Beta [Bld 239] - Source File MIKBUG.ASM - Page 7 - 04/03/2023 02:01:35 PM
+
+
+  Symbol Table (* = unused):
+  --------------------------
+
+*ARCHITECTURE :                                      "x86_64-unknown-linux" - |
+ BADDR :                       E047 C |  BEGA :                        A002 C |
+ BYTE :                        E055 C |  BYTECT :                      A00B C |
+ C1 :                          E044 C |  C2 :                          E132 C |
+*CASESENSITIVE :                  0 - |  CHA51 :                       E087 C |
+ CHANGE :                      E085 C |  CKSM :                        A00A C |
+*CONSTPI :        3.141592653589793 - |  CONTRL :                      E0E3 C |
+*DATE :                "04/03/2023" - |  DE :                          E1F3 C |
+ DEL :                         E1EF C |  ENDA :                        A004 C |
+*FALSE :                          0 - | *HAS64 :                          1 - |
+ IN1 :                         E1AF C |  IN1HG :                       E0BE C |
+ IN3 :                         E1BE C |  INCH :                        E078 C |
+ INEEE :                       E1AC C |  INHEX :                       E0AA C |
+ IO :                          E000 C |  IOS :                         E1EA C |
+*IOUT :                        E1D4 C |  IOUT2 :                       E1E3 C |
+ IOV :                         A000 C | *LISTON :                         1 - |
+ LOAD :                        E00A - |  LOAD11 :                      E02F C |
+ LOAD15 :                      E03B C |  LOAD19 :                      E040 C |
+ LOAD21 :                      E044 - |  LOAD3 :                       E013 C |
+*MACEXP :                         7 - |  MCL :                         E19D C |
+ MCLOFF :                      E19C C |  MCONT :                       A011 C |
+*MOMCPU :                      6800 - | *MOMCPUNAME :                "6800" - |
+ MTAPE1 :                      E134 C | *NESTMAX :                      100 - |
+ NIO :                         A006 C |  OUT1 :                        E1DA C |
+ OUT2H :                       E0BF C | *OUT2HA :                      E0C1 C |
+ OUT2HS :                      E0CA C |  OUT4HS :                      E0C8 C |
+ OUTCH :                       E075 C |  OUTEEE :                      E1D1 C |
+ OUTHL :                       E067 C |  OUTHR :                       E06B C |
+ OUTS :                        E0CC C | *PADDING :                        0 - |
+ PDATA1 :                      E07E C |  PDATA2 :                      E07B C |
+ PIAD :                        8004 - |  PIADB :                       8006 - |
+*PIAS :                        8005 - |  PIASB :                       8007 - |
+ POWDWN :                      E005 C |  PRINT :                       E11F C |
+ PUN11 :                       E148 C |  PUN22 :                       E15A C |
+ PUN23 :                       E15C C |  PUN32 :                       E17C C |
+ PUNCH :                       E13D - |  PUNT2 :                       E197 C |
+*RELAXED :                        0 - |  SAV :                         E1A5 C |
+ SFE :                         E113 - |  SP :                          A008 C |
+ STACK :                       A042 C |  START :                       E0D0 - |
+ TEMP :                        A00E C | *TIME :               "02:01:35 PM" - |
+*TRUE :                           1 - |  TW :                          A00F C |
+*VERSION :                     142F - |  XHI :                         A00C C |
+ XLOW :                        A00D C |  XTEMP :                       A012 C |
+
+     85 symbols
+     19 unused symbols
+
+ AS V1.42 Beta [Bld 239] - Source File MIKBUG.ASM - Page 8 - 04/03/2023 02:01:35 PM
+
+
+  Code Pages:
+  ----------
+
+STANDARD (0 changed characters)
+
+1 code page
+
+0.00 seconds assembly time
+
+    353 lines source file
+      2 passes
+      0 errors
+      0 warnings
