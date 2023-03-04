@@ -1,4 +1,4 @@
-       NAM     MIKBUG
+;       NAM     MIKBUG
 *     REV 009
 *     COPYRIGHT 1974 BY MOTOROLA INC
 
@@ -15,85 +15,85 @@ PIASB  EQU    $8007
 PIADB  EQU    $8006    ; B DATA
 PIAS   EQU    $8005    ; PIA STATUS
 PIAD   EQU    $8004    ; PIA DATA
-       OPT    MEMORY
+;      OPT    MEMORY
        ORG    $E000
 
 *     I/O INTERRUPT SEQUENCE
 IO     LDX    IOV
-       JMP    X
+       JMP    0,X
 
 * NMI SEQUENCE
 POWDWN LDX    NIO      ; GET NMI VECTOR
-       JMP    X
+       JMP    0,X
 
 
 LOAD   EQU    *
-       LDA A  #$3C
-       STA A  PIASB    ; READER RELAY ON
-       LDA A  #@21
+       LDAA   #$3C
+       STAA   PIASB    ; READER RELAY ON
+       LDAA   #@21
        BSR    OUTCH    ; OUTPUT CHAR
 
 LOAD3  BSR    INCH
-       CMP A  #'S
+       CMPA   #'S
        BNE    LOAD3    ; 1ST CHAR NOT (S)
        BSR    INCH
-       CMP A  #'9
+       CMPA   #'9
        BEQ    LOAD21
-       CMP A  #'1
+       CMPA   #'1
        BNE    LOAD3    ; 2ND CHAR NOT (1)
        CLR    CKSM     ; ZERO CHECKSUM
        BSR    BYTE     ; READ BYTE
-       SUB A  #2
-       STA A  BYTECT   ; BYTE COUNT
+       SUBA   #2
+       STAA   BYTECT   ; BYTE COUNT
 * BUILD ADDRESS
        BSR    BADDR
 * STORE DATA
 LOAD11 BSR    BYTE
        DEC    BYTECT
        BEQ    LOAD15   ; ZERO BYTE COUNT
-       STA A  X        ; STORE DATA
+       STAA   0,X      ; STORE DATA
        INX
        BRA    LOAD11
 
 LOAD15 INC    CKSM
        BEQ    LOAD3
-LOAD19 LDA A  #'?      ; PRINT QUESTION MARK
+LOAD19 LDAA   #'?      ; PRINT QUESTION MARK
        BSR    OUTCH
 LOAD21 EQU    *
 C1     JMP    CONTRL
 
 * BUILD ADDRESS
 BADDR  BSR    BYTE     ; READ 2 FRAMES
-       STA A  XHI
+       STAA   XHI
        BSR    BYTE
-       STA A  XLOW
+       STAA   XLOW
        LDX    XHI      ; (X) ADDRESS WE BUILT
        RTS
 
 * INPUT BYTE (TWO FRAMES)
 BYTE   BSR    INHEX    ; GET HEX CHAR
-       ASL A
-       ASL A
-       ASL A
-       ASL A
+       ASLA
+       ASLA
+       ASLA
+       ASLA
        TAB
        BSR    INHEX
        ABA
        TAB
-       ADD B  CKSM
-       STA B  CKSM
+       ADDB   CKSM
+       STAB   CKSM
        RTS
 
-OUTHL  LSR A           ; OUT HEX LEFT BCD DIGIT
-       LSR A
-       LSR A
-       LSR A
+OUTHL  LSRA            ; OUT HEX LEFT BCD DIGIT
+       LSRA
+       LSRA
+       LSRA
 
-OUTHR  AND A  #$F      ; OUT HEX RIGHT BCD DIGIT
-       ADD A  #$30
-       CMP A  #$39
+OUTHR  ANDA   #$F      ; OUT HEX RIGHT BCD DIGIT
+       ADDA   #$30
+       CMPA   #$39
        BLS    OUTCH
-       ADD A  #$7
+       ADDA   #$7
 
 * OUTPUT ONE CHAR
 OUTCH  JMP    OUTEEE
@@ -102,8 +102,8 @@ INCH   JMP    INEEE
 * PRINT DATA POINTED AT BY X-REG
 PDATA2 BSR    OUTCH
        INX
-PDATA1 LDA A  X
-       CMP A  #4
+PDATA1 LDAA   0,X
+       CMPA   #4
        BNE    PDATA2
        RTS             ; STOP ON EOT
 
@@ -117,12 +117,12 @@ CHA51  LDX    #MCL
        BSR    OUT2HS   ; PRINT DATA (OLD)
        STX    XHI      ; SAVE DATA ADDRESS
        BSR    INCH     ; INPUT ONE CHAR
-       CMP A  #$20
+       CMPA   #$20
        BNE    CHA51    ; NOT SPACE
        BSR    BYTE     ; INPUT NEW DATA
        DEX
-       STA A  X        ; CHANGE MEMORY
-       CMP A  X
+       STAA   0,X      ; CHANGE MEMORY
+       CMPA   0,X
        BEQ    CHA51    ; DID CHANGE
        BRA    LOAD19   ; NOT CHANGED
 
@@ -130,27 +130,27 @@ CHA51  LDX    #MCL
 
 * INPUT HEX CHAR
 INHEX  BSR    INCH
-       SUB A  #$30
+       SUBA   #$30
        BMI    C1       ; NOT HEX
-       CMP A  #$09
+       CMPA   #$09
        BLE    IN1HG
-       CMP A  #$11
+       CMPA   #$11
        BMI    C1       ; NOT HEX
-       CMP A  #$16
+       CMPA   #$16
        BGT    C1       ; NOT HEX
-       SUB A  #7
+       SUBA   #7
 IN1HG  RTS
 
 
-OUT2H  LDA A  0,X      ; OUTPUT 2 HEX CHAR
+OUT2H  LDAA   0,X      ; OUTPUT 2 HEX CHAR
 OUT2HA BSR    OUTHL    ; OUT LEFT HEX CHAR
-       LDA A  0,X
+       LDAA   0,X
        INX
        BRA    OUTHR    ; OUTPUT RIGHT HEX CHAR AND RTS
 
 OUT4HS BSR    OUT2H    ; OUTPUT 4 HEX CHAR + SPACE
 OUT2HS BSR    OUT2H    ; OUTPUT 2 HEX CHAR + SPACE
-OUTS   LDA A  #$20     ; SPACE
+OUTS   LDAA   #$20     ; SPACE
        BRA    OUTCH    ; (BSR & RTS)
 
 * ENTER POWER ON SEQUENCE
@@ -160,13 +160,13 @@ START  EQU    *
 * INZ PIA
        LDX    #PIAD    ; (X) POINTER TO DEVICE PIA
        INC    0,X      ; SET DATA DIR PIAD
-       LDA A  #$7
-       STA A  1,X      ; INIT CON PIAS
+       LDAA   #$7
+       STAA   1,X      ; INIT CON PIAS
        INC    0,X      ; MARK COM LINE
-       STA A  2,X      ; SET DATA DIR PIADB
-CONTRL LDA A  #$34
-       STA A  PIASB    ; SET CONTROL PIASB TURN READER
-       STA A  PIADB    ; SET TIMER INTERVAL
+       STAA   2,X      ; SET DATA DIR PIADB
+CONTRL LDAA   #$34
+       STAA   PIASB    ; SET CONTROL PIASB TURN READER
+       STAA   PIADB    ; SET TIMER INTERVAL
        LDS    #STACK   ; SET CONTROL STACK POINTER
        LDX    #MCLOFF
 
@@ -175,16 +175,16 @@ CONTRL LDA A  #$34
        BSR    INCH     ; READ CHARACTER
        TAB
        BSR    OUTS     ; PRINT SPACE
-       CMP B  #'L
+       CMPB   #'L
        BNE    *+5
        JMP    LOAD
-       CMP B  #'M
+       CMPB   #'M
        BEQ    CHANGE
-       CMP B  #'R
+       CMPB   #'R
        BEQ    PRINT    ; STACK
-       CMP B  #'P
+       CMPB   #'P
        BEQ    PUNCH    ; PRINT/PUNCH
-       CMP B  #'G
+       CMPB   #'G
        BNE    CONTRL
        LDS    SP       ; RESTORE PGM'S STACK PTR
        RTI             ; GO
@@ -220,27 +220,27 @@ MTAPE1 FCB    $D,$A,0,0,0,0,'S,'1,4 ; PUNCH FORMAT
 
 PUNCH  EQU    *
 
-       LDA A  #$12     ; TURN TTY PUNCH ON
+       LDAA   #$12     ; TURN TTY PUNCH ON
        JSR    OUTCH    ; OUT CHAR
 
        LDX    BEGA
        STX    TW       ; TEMP BEGINING ADDRESS
-PUN11  LDA A  ENDA+1
-       SUB A  TW+1
-       LDA B  ENDA
-       SBC B  TW
+PUN11  LDAA   ENDA+1
+       SUBA   TW+1
+       LDAB   ENDA
+       SBCB   TW
        BNE    PUN22
        CMPA   #16
        BCS    PUN23
-PUN22  LDA A  #15
-PUN23  ADD A  #4
-       STA A  MCONT    ; FRAME COUNT THIS RECORD
-       SUB A  #3
-       STA A  TEMP     ; BYTE COUNT THIS RECORD
+PUN22  LDAA   #15
+PUN23  ADDA   #4
+       STAA   MCONT    ; FRAME COUNT THIS RECORD
+       SUBA   #3
+       STAA   TEMP     ; BYTE COUNT THIS RECORD
 *     PUNCH C/R,L/F,NULL,S,1
        LDX    #MTAPE1
        JSR    PDATA1
-       CLR B           ; ZERO CHECKSUM
+       CLRB            ; ZERO CHECKSUM
 *     PUNCH FRAME COUNT
        LDX    #MCONT
        BSR    PUNT2    ; PUNCH 2 HEX CHAR
@@ -254,11 +254,11 @@ PUN32  BSR    PUNT2    ; PUNCH ONE BYTE (2 FRAMES)
        DEC    TEMP     ; DEC BYTE COUNT
        BNE    PUN32
        STX    TW
-       COM B
-       PSH B
+       COMB
+       PSHB
        TSX
        BSR    PUNT2    ; PUNCH CHECKSUM
-       PUL B
+       PULB
        LDX    TW
        DEX
        CPX    ENDA
@@ -266,7 +266,7 @@ PUN32  BSR    PUNT2    ; PUNCH ONE BYTE (2 FRAMES)
        BRA    C2       ; JMP TO CONTROL
 
 *     PUNCH 2 HEX CHAR, UPDATE CHECKSUM
-PUNT2  ADD B  0,X      ; UPDATE CHECKSUM
+PUNT2  ADDB   0,X      ; UPDATE CHECKSUM
        JMP    OUT2H    ; OUTPUT TWO HEX CHAR AND RTS
 
 MCLOFF FCB    $13      ; READER OFF
@@ -276,47 +276,47 @@ SAV    STX    XTEMP
        LDX    #PIAD
        RTS
 * INPUT ONE CHAR INTO A-REGISTER
-INEEE  PSH B           ; SAVE ACC-B
+INEEE  PSHB            ; SAVE ACC-B
        BSR    SAV      ; SAV XR
-IN1    LDA A  0,X      ; LOOK FOR START BIT
+IN1    LDAA   0,X      ; LOOK FOR START BIT
        BMI    IN1
        CLR    2,X      ; SET COUNTER FOR HALF BIT TIME
        BSR    DE       ; START TIMER
        BSR    DEL      ; DELAY HALF BIT TIME
-       LDA B  #4       ; SET DEL FOR FULL BIT TIME
-       STA B  2,X
-       ASL B           ; SET UP CNTR WITH 8
+       LDAB   #4       ; SET DEL FOR FULL BIT TIME
+       STAB   2,X
+       ASLB            ; SET UP CNTR WITH 8
 IN3    BSR    DEL      ; WAIT ONE CHAR TIME
        SEC             ; MARK COM LINE
        ROL    0,X      ; GET BIT INTO CFF
-       ROR A           ; CFF TO AR
-       DEC B
+       RORA            ; CFF TO AR
+       DECB
        BNE    IN3
        BSR    DEL      ; WAIT FOR STOP BIT
-       AND A  #$7F     ; RESET PARITY BIT
-       CMP A  #$7F
+       ANDA   #$7F     ; RESET PARITY BIT
+       CMPA   #$7F
        BEQ    IN1      ; IF RUBOUT,GET NEXT CHAR
        BRA    IOUT2    ; GO RESTORE REG
 
 * OUTPUT ONE CHAR
-OUTEEE PSH B           ; SAV BR
+OUTEEE PSHB            ; SAV BR
        BSR    SAV      ; SAV XR
-IOUT   LDA B  #$A      ; SET UP COUNTER
+IOUT   LDAB   #$A      ; SET UP COUNTER
        DEC    0,X      ; SET START BIT
        BSR    DE       ; START TIMER
 *
 OUT1   BSR    DEL      ; DELAY ONE BIT TIME
-       STA A  0,X      ; SET START BIT
+       STAA   0,X      ; SET START BIT
        SEC             ; SET CARRY BIT
-       ROR A           ; SHIFT IN NEXT BIT
-       DEC B           ; DECEREMENT COUNTER
+       RORA            ; SHIFT IN NEXT BIT
+       DECB            ; DECEREMENT COUNTER
        BNE    OUT1     ; TEST FOR 0
-IOUT2  LDA B  2,X      ; TEST FOR STOP BITS
-       ASL B           ; SHIFT BIT TO SIGN
+IOUT2  LDAB   2,X      ; TEST FOR STOP BITS
+       ASLB            ; SHIFT BIT TO SIGN
        BPL    IOS      ; BRANCH FOR 1 STOP BIT
        BSR    DEL      ; DELAY FOR STOP BITS
 IOS    LDX    XTEMP    ; RES XR
-       PUL B           ; REESTORE BR
+       PULB            ; REESTORE BR
        RTS
 *
 DEL    TST    2,X      ; IS TIME UP

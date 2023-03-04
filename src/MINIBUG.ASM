@@ -1,4 +1,4 @@
-       NAM    MINIB
+;       NAM    MINIB
 * MINI-BUG
 * COPYWRITE 1973, MOTOROLA INC
 * REV 004 (USED WITH MIKBUG)
@@ -7,86 +7,86 @@ ACIADA EQU    ACIACS+1
        ORG    $FE00
 * MINIB
 * INPUT ONE CHAR INTO A-REGISTER
-INCH   LDA A  ACIACS
-       ASR A
+INCH   LDAA   ACIACS
+       ASRA
        BCC    INCH     ; RECEIVE NOT READY
-       LDA A  ACIADA   ; INPUT CHARACTER
-       AND A  #$7F     ; RESET PARITY BIT
-       CMP A  #$7F
+       LDAA   ACIADA   ; INPUT CHARACTER
+       ANDA   #$7F     ; RESET PARITY BIT
+       CMPA   #$7F
        BEQ    INCH     ; RUBOUT; IGNORE
        JMP    OUTCH    ; ECHO CHAR
 
 * INPUT HEX CHAR
 INHEX  BSR    INCH
-       CMP A  #$30
+       CMPA   #$30
        BMI    C1       ; NOT HEX
-       CMP A  #$39
+       CMPA   #$39
        BLE    IN1HG
-       CMP A  #$41
+       CMPA   #$41
        BMI    C1       ; NOT HEX
-       CMP A  #$46
+       CMPA   #$46
        BGT    C1       ; NOT HEX
-       SUB A  #7
+       SUBA   #7
 IN1HG  RTS
 
-LOAD   LDA A  #$D1     ; TURN READER ON
-       STA A  ACIACS
-       LDA A  #@21
+LOAD   LDAA   #$D1     ; TURN READER ON
+       STAA   ACIACS
+       LDAA   #@21
        BSR    OUTCH
 
 LOAD3  BSR    INCH
-       CMP A  #'S
+       CMPA   #'S
        BNE    LOAD3    ; 1ST CHAR NOT (S)
        BSR    INCH
-       CMP A  #'9
+       CMPA   #'9
        BEQ    LOAD21
-       CMP A  #'1
+       CMPA   #'1
        BNE    LOAD3    ; 2ND CHAR NOT (1)
        CLR    CKSM     ; ZERO CHECKSUM
        BSR    BYTE     ; READ BYTE
-       SUB A  #2
-       STA A  BYTECT   ; BYTE COUNT
+       SUBA   #2
+       STAA   BYTECT   ; BYTE COUNT
 * BUILD ADDRESS
        BSR    BADDR
 * STORE DATA
 LOAD11 BSR    BYTE
        DEC    BYTECT
        BEQ    LOAD15   ; ZERO BYTE COUNT
-       STA A  X        ; STORE DATA
+       STAA   0,X      ; STORE DATA
        INX
        BRA    LOAD11
 
 LOAD15 INC    CKSM
        BEQ    LOAD3
-LOAD19 LDA A  #'?      ; PRINT QUESTION MARK
+LOAD19 LDAA   #'?      ; PRINT QUESTION MARK
        BSR    OUTCH
-LOAD21 LDA A  #$B1     ; TURN READER OFF
-       STA A  ACIACS
-       LDA A  #@23
+LOAD21 LDAA   #$B1     ; TURN READER OFF
+       STAA   ACIACS
+       LDAA   #@23
        BSR    OUTCH
 C1     JMP    CONTRL
 
 * BUILD ADDRESS
 BADDR  BSR    BYTE     ; READ 2 FRAMES
-       STA A  XHI
+       STAA   XHI
        BSR    BYTE
-       STA A  XLOW
+       STAA   XLOW
        LDX    XHI      ; (X) ADDRESS WE BUILT
        RTS
 
 * INPUT BYTE (TWO FRAMES)
 BYTE   BSR    INHEX    ; GET HEX CHAR
-       ASL A
-       ASL A
-       ASL A
-       ASL A
+       ASLA
+       ASLA
+       ASLA
+       ASLA
        TAB
        BSR    INHEX
-       AND A  #$0F     ; MASK TO 4 BITS
+       ANDA   #$0F     ; MASK TO 4 BITS
        ABA
        TAB
-       ADD B  CKSM
-       STA B  CKSM
+       ADDB   CKSM
+       STAB   CKSM
        RTS
 
 * CHANGE MEMORY (M AAAA DD NN)
@@ -95,75 +95,75 @@ CHANGE BSR    BADDR    ; BUILD ADDRESS
        BSR    OUT2HS
        BSR    BYTE
        DEX
-       STA A  X
-       CMP A  X
+       STAA   0,X
+       CMPA   0,X
        BNE    LOAD19   ; MEMORY DID NOT CHANGE
        BRA    CONTRL
 
-OUTHL  LSR A           ; OUT HEX LEFT BCD DIGIT
-       LSR A
-       LSR A
-       LSR A
+OUTHL  LSRA            ; OUT HEX LEFT BCD DIGIT
+       LSRA
+       LSRA
+       LSRA
 
-OUTHR  AND A  #$F      ; OUT HEX RIGHT BCD DIGIT
-       ADD A  #$30
-       CMP A  #$39
+OUTHR  ANDA   #$F      ; OUT HEX RIGHT BCD DIGIT
+       ADDA   #$30
+       CMPA   #$39
        BLS    OUTCH
-       ADD A  #$7
+       ADDA   #$7
 
 * OUTPUT ONE CHAR
-OUTCH  PSH B           ; SAVE B-REG
-OUTC1  LDA B  ACIACS
-       ASR B
-       ASR B
+OUTCH  PSHB            ; SAVE B-REG
+OUTC1  LDAB   ACIACS
+       ASRB
+       ASRB
        BCC    OUTC1    ; XMIT NOT READY
-       STA A  ACIADA   ; OUTPUT CHARACTER
-       PUL B
+       STAA   ACIADA   ; OUTPUT CHARACTER
+       PULB
        RTS
 
-OUT2H  LDA A  0,X      ; OUTPUT 2 HEX CHAR
+OUT2H  LDAA   0,X      ; OUTPUT 2 HEX CHAR
        BSR    OUTHL    ; OUT LEFT HEX CHAR
-       LDA A  0,X
+       LDAA   0,X
        BSR    OUTHR    ; OUT RIGHT HEX VHAR
        INX
        RTS
 
 OUT2HS BSR    OUT2H    ; OUTPUT 2 HEX CHAR + SPACE
-OUTS   LDA A  #$20     ; SPACE
+OUTS   LDAA   #$20     ; SPACE
        BRA    OUTCH    ; (BSR & RTS)
 
 
 * PRINT CONTENTS OF STACK
 PRINT  TSX
        STX    SP       ; SAVE STACK POINTER
-       LDA B  #9
+       LDAB   #9
 PRINT2 BSR    OUT2HS   ; OUT 2 HEX & SPCACE
-       DEC B
+       DECB
        BNE    PRINT2
 
 * ENTER POWER ON SEQUENCE
 START  EQU    *
 * INZ ACIA
-       LDA A  #$B1     ; SET SYSTEM PARAMETERS
-       STA A  ACIACS
+       LDAA   #$B1     ; SET SYSTEM PARAMETERS
+       STAA   ACIACS
 
 CONTRL LDS    #STACK   ; SET STACK POINTER
-       LDA A  #$D      ; CARRIAGE RETURN
+       LDAA   #$D      ; CARRIAGE RETURN
        BSR    OUTCH
-       LDA A  #$A      ; LINE FEED
+       LDAA   #$A      ; LINE FEED
        BSR    OUTCH
 
        JSR    INCH     ; READ CHARACTER
        TAB
        BSR    OUTS     ; PRINT SPACE
-       CMP B  #'L
+       CMPB   #'L
        BNE    *+5
        JMP    LOAD
-       CMP B  #'M
+       CMPB   #'M
        BEQ    CHANGE
-       CMP B  #'P
+       CMPB   #'P
        BEQ    PRINT    ; STACK
-       CMP B  #'G
+       CMPB   #'G
        BNE    CONTRL
        RTI             ; GO
 
