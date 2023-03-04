@@ -35,12 +35,12 @@ LOAD   LDAA   #$D1     ; TURN READER ON
        BSR    OUTCH
 
 LOAD3  BSR    INCH
-       CMPA   #'S
+       CMPA   #'S'
        BNE    LOAD3    ; 1ST CHAR NOT (S)
        BSR    INCH
-       CMPA   #'9
+       CMPA   #'9'
        BEQ    LOAD21
-       CMPA   #'1
+       CMPA   #'1'
        BNE    LOAD3    ; 2ND CHAR NOT (1)
        CLR    CKSM     ; ZERO CHECKSUM
        BSR    BYTE     ; READ BYTE
@@ -58,7 +58,7 @@ LOAD11 BSR    BYTE
 
 LOAD15 INC    CKSM
        BEQ    LOAD3
-LOAD19 LDAA   #'?      ; PRINT QUESTION MARK
+LOAD19 LDAA   #'?'     ; PRINT QUESTION MARK
        BSR    OUTCH
 LOAD21 LDAA   #$B1     ; TURN READER OFF
        STAA   ACIACS
@@ -156,14 +156,14 @@ CONTRL LDS    #STACK   ; SET STACK POINTER
        JSR    INCH     ; READ CHARACTER
        TAB
        BSR    OUTS     ; PRINT SPACE
-       CMPB   #'L
+       CMPB   #'L'
        BNE    *+5
        JMP    LOAD
-       CMPB   #'M
+       CMPB   #'M'
        BEQ    CHANGE
-       CMPB   #'P
+       CMPB   #'P'
        BEQ    PRINT    ; STACK
-       CMPB   #'G
+       CMPB   #'G'
        BNE    CONTRL
        RTI             ; GO
 
